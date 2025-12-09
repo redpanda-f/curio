@@ -2,6 +2,7 @@ package contract
 
 import (
 	"math/big"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/snadrus/must"
@@ -42,6 +43,40 @@ func ContractAddresses() PDPContracts {
 				FWSService: common.HexToAddress("0x8408502033C418E1bbC97cE9ac48E5528F371A9f"), // FWSS Proxy - https://github.com/FilOzone/filecoin-services/releases/tag/v1.0.0
 			},
 		}
+	case build.BuildLocalnet:
+		// For localnet, require environment variables
+		payAddr := os.Getenv("FOC_LOCALNET_CONTRACT_PAY")
+		if payAddr == "" {
+			panic("FOC_LOCALNET_CONTRACT_PAY environment variable must be set for localnet")
+		}
+		if !common.IsHexAddress(payAddr) {
+			panic("FOC_LOCALNET_CONTRACT_PAY must be a valid hex address")
+		}
+
+		fwssAddr := os.Getenv("FOC_LOCALNET_CONTRACT_FWSS")
+		if fwssAddr == "" {
+			panic("FOC_LOCALNET_CONTRACT_FWSS environment variable must be set for localnet")
+		}
+		if !common.IsHexAddress(fwssAddr) {
+			panic("FOC_LOCALNET_CONTRACT_FWSS must be a valid hex address")
+		}
+
+		simpleAddr := os.Getenv("FOC_LOCALNET_CONTRACT_SIMPLE")
+		if simpleAddr == "" {
+			// Default to zero address if not set
+			simpleAddr = "0x0000000000000000000000000000000000000000"
+		}
+		if !common.IsHexAddress(simpleAddr) {
+			panic("FOC_LOCALNET_CONTRACT_SIMPLE must be a valid hex address")
+		}
+
+		return PDPContracts{
+			PDPVerifier: common.HexToAddress(payAddr),
+			AllowedPublicRecordKeepers: RecordKeeperAddresses{
+				FWSService: common.HexToAddress(fwssAddr),
+				Simple:     common.HexToAddress(simpleAddr),
+			},
+		}
 	default:
 		panic("PDP contract unknown for this network")
 	}
@@ -79,6 +114,16 @@ func ServiceRegistryAddress() (common.Address, error) {
 		return common.HexToAddress(ServiceRegistryCalibnet), nil
 	case build.BuildMainnet:
 		return common.HexToAddress(ServiceRegistryMainnet), nil
+	case build.BuildLocalnet:
+		simpleAddr := os.Getenv("FOC_LOCALNET_CONTRACT_SIMPLE")
+		if simpleAddr == "" {
+			// Default to zero address if not set
+			simpleAddr = "0x0000000000000000000000000000000000000000"
+		}
+		if !common.IsHexAddress(simpleAddr) {
+			return common.Address{}, xerrors.Errorf("FOC_LOCALNET_CONTRACT_SIMPLE must be a valid hex address")
+		}
+		return common.HexToAddress(simpleAddr), nil
 	default:
 		return common.Address{}, xerrors.Errorf("service registry address not set for this network %s", build.BuildTypeString()[1:])
 	}
@@ -93,6 +138,16 @@ func USDFCAddress() (common.Address, error) {
 		return common.HexToAddress(USDFCAddressCalibnet), nil
 	case build.BuildMainnet:
 		return common.HexToAddress(USDFCAddressMainnet), nil
+	case build.BuildLocalnet:
+		// For localnet, USDFC address is optional and defaults to zero address
+		usdfc := os.Getenv("FOC_LOCALNET_CONTRACT_USDFC")
+		if usdfc == "" {
+			usdfc = "0x0000000000000000000000000000000000000000"
+		}
+		if !common.IsHexAddress(usdfc) {
+			return common.Address{}, xerrors.Errorf("FOC_LOCALNET_CONTRACT_USDFC must be a valid hex address")
+		}
+		return common.HexToAddress(usdfc), nil
 	default:
 		return common.Address{}, xerrors.Errorf("USDFC address not set for this network %s", build.BuildTypeString()[1:])
 	}

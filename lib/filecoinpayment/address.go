@@ -1,6 +1,8 @@
 package filecoinpayment
 
 import (
+	"os"
+
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/xerrors"
 
@@ -16,6 +18,15 @@ func PaymentContractAddress() (common.Address, error) {
 		return common.HexToAddress(PaymentContractCalibnet), nil
 	case build.BuildMainnet:
 		return common.HexToAddress(PaymentContractMainnet), nil
+	case build.BuildLocalnet:
+		payAddr := os.Getenv("FOC_LOCALNET_CONTRACT_PAY")
+		if payAddr == "" {
+			return common.Address{}, xerrors.Errorf("FOC_LOCALNET_CONTRACT_PAY environment variable must be set for localnet")
+		}
+		if !common.IsHexAddress(payAddr) {
+			return common.Address{}, xerrors.Errorf("FOC_LOCALNET_CONTRACT_PAY must be a valid hex address")
+		}
+		return common.HexToAddress(payAddr), nil
 	default:
 		return common.Address{}, xerrors.Errorf("payment contract address not set for this network %s", build.BuildTypeString()[1:])
 	}

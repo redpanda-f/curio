@@ -1,6 +1,8 @@
 package multicall
 
 import (
+	"os"
+
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/xerrors"
 
@@ -16,6 +18,15 @@ func MultiCallAddress() (common.Address, error) {
 		return common.HexToAddress(MultiCallAddressCalibnet), nil
 	case build.BuildMainnet:
 		return common.HexToAddress(MultiCallAddressMainnet), nil
+	case build.BuildLocalnet:
+		multicallAddr := os.Getenv("FOC_LOCALNET_CONTRACT_MULTICALL")
+		if multicallAddr == "" {
+			return common.Address{}, xerrors.Errorf("FOC_LOCALNET_CONTRACT_MULTICALL environment variable must be set for localnet")
+		}
+		if !common.IsHexAddress(multicallAddr) {
+			return common.Address{}, xerrors.Errorf("FOC_LOCALNET_CONTRACT_MULTICALL must be a valid hex address")
+		}
+		return common.HexToAddress(multicallAddr), nil
 	default:
 		return common.Address{}, xerrors.Errorf("multicall address not set for this network %s", build.BuildTypeString()[1:])
 	}
